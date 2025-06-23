@@ -3,6 +3,7 @@ extern crate sdl2;
 mod point;
 mod square;
 mod tuple;
+
 use point::*;
 use square::*;
 use tuple::*;
@@ -12,27 +13,27 @@ use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
-use sdl2::render::Canvas;
-use sdl2::sys::{Window, SDL_HINT_THREAD_FORCE_REALTIME_TIME_CRITICAL};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+macro_rules! rad {
+    ($angle:expr) => {
+        $angle * std::f32::consts::PI / 180.0
+    };
+}
+
 const WINDOW_WIDTH: u32 = 800;
 const WINDOW_HEIGHT: u32 = 600;
-const SQUARE_SIZE: u32 = 5;
+const SQUARE_SIZE: u32 = 2;
 const SQUARE_N_WIDTH: u32 = WINDOW_WIDTH / SQUARE_SIZE;
 const SQUARE_N_HEIGHT: u32 = WINDOW_HEIGHT / SQUARE_SIZE;
 const WIDTH: u32 = WINDOW_WIDTH / SQUARE_SIZE;
 const HEIGHT: u32 = WINDOW_HEIGHT / SQUARE_SIZE;
-const FOV: f64 = 1.57; // Field of view (90°)
+const FOV: f32 = rad!(75.0);
 const STEP: i32 = 5;
 
 lazy_static! {
-    static ref PLAYER: Arc<Mutex<Point3D>> = Arc::new(Mutex::new(Point3D::new(
-        (WIDTH / 2) as i32,
-        (HEIGHT / 2) as i32,
-        0
-    )));
+    static ref PLAYER: Arc<Mutex<Point3D>> = Arc::new(Mutex::new(Point3D::new(0, 0, 0)));
 }
 
 fn is_in_bound(point: &Point2D) -> bool {
@@ -45,8 +46,8 @@ fn get_rect_from_position(point: &Point2D) -> Option<Rect> {
     }
 
     Some(Rect::new(
-        point.x * SQUARE_SIZE as i32,
-        point.y * SQUARE_SIZE as i32,
+        (WIDTH / 2) as i32 + point.x * SQUARE_SIZE as i32,
+        (HEIGHT / 2) as i32 + point.y * SQUARE_SIZE as i32,
         SQUARE_SIZE,
         SQUARE_SIZE,
     ))
@@ -57,35 +58,34 @@ fn get_rect_from_position(point: &Point2D) -> Option<Rect> {
 // D     = 20
 
 pub fn main() {
-    // let points = vec!{
-    //     Point3D::new(20 + 200, 20, 125),
-    //     Point3D::new(60 + 200, 20, 125),
-    //     Point3D::new(60 + 200, 60, 125),
-    //     Point3D::new(20 + 200, 60, 125),
-    //     Point3D::new(20 + 200, 20, 150),
-    //     Point3D::new(60 + 200, 20, 150),
-    //     Point3D::new(60 + 200, 60, 150),
-    //     Point3D::new(20 + 200, 60, 150),
-    // };
-
     let vertices0 = [
-        Point3D::new(20 + 200, 20, 150),
-        Point3D::new(60 + 200, 20, 150),
-        Point3D::new(60 + 200, 60, 150),
-        Point3D::new(20 + 200, 60, 150),
+        Point3D::new(20, 20, 150),
+        Point3D::new(60, 20, 150),
+        Point3D::new(60, 60, 150),
+        Point3D::new(20, 60, 150),
     ];
 
     let vertices1 = [
-        Point3D::new(20 + 200, 20, 125),
-        Point3D::new(60 + 200, 20, 125),
-        Point3D::new(60 + 200, 60, 125),
-        Point3D::new(20 + 200, 60, 125),
+        Point3D::new(20, 20, 125),
+        Point3D::new(60, 20, 125),
+        Point3D::new(60, 60, 125),
+        Point3D::new(20, 60, 125),
     ];
 
-    let squares: Vec<Square> = vec![
+    let vertices2 = [
+        Point3D::new(20, 20, 125),
+        Point3D::new(60, 20, 125),
+        Point3D::new(60, 20, 150),
+        Point3D::new(20, 20, 150),
+    ];
+
+    let mut squares: Vec<Square> = vec![
         Square::new(&vertices0, &Color::GREEN),
         Square::new(&vertices1, &Color::BLUE),
+        Square::new(&vertices2, &Color::RED),
     ];
+
+    let mut cur_rotation: f32 = 0.0;
 
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
@@ -98,23 +98,43 @@ pub fn main() {
 
     let mut canvas = window.into_canvas().build().unwrap();
 
-    canvas.set_draw_color(Color::RGB(0, 255, 255));
+    canvas.set_draw_color(Color::YELLOW);
     canvas.clear();
     canvas.present();
     let mut event_pump = sdl_context.event_pump().unwrap();
-    let mut i = 0;
     'running: loop {
         // Draw the background
         canvas.set_draw_color(Color::BLACK);
         canvas.clear();
 
-        for s in squares.iter() {
-            canvas.set_draw_color(s.color);
+        let p = {
+            let p = PLAYER.lock().unwrap();
+            p.clone()
+        };
 
-            for vertices in s.iter_pairs() {
+        let dir_x = Point3D::rotate(&Point3D::X, &Point3D::ZERO, Rotation::RotY(cur_rotation));
+        let dir_y = Point3D::Y;
+        let dir_z = Point3D::rotate(&Point3D::Z, &Point3D::ZERO, Rotation::RotY(cur_rotation));
+
+        dbg!(&dir_z);
+
+        for s in squares.iter_mut() {
+            let mut vertices = [Point3D::ZERO; 4];
+
+            for (i, v) in s.vertices.iter().enumerate() {
+                vertices[i] = Point3D::rotate(v, &p, Rotation::RotY(cur_rotation));
+            }
+
+            let sq = Square::new(&vertices, &s.color);
+            canvas.set_draw_color(sq.color);
+
+            for vertices in sq.iter_pairs() {
+                let first = vertices.first;
+                let second = vertices.second;
+
                 let _ = canvas.draw_line(
-                    sdl2::rect::Point::from(&Point2D::from(vertices.first)),
-                    sdl2::rect::Point::from(&Point2D::from(vertices.second)),
+                    sdl2::rect::Point::from(&Point2D::from(first)),
+                    sdl2::rect::Point::from(&Point2D::from(second)),
                 );
             }
         }
@@ -131,42 +151,60 @@ pub fn main() {
                     ..
                 } => {
                     let mut p = PLAYER.lock().unwrap();
-                    p.z += STEP;
+                    let d = &dir_z * STEP;
+                    *p += d;
                 }
                 Event::KeyDown {
                     keycode: Some(Keycode::S),
                     ..
                 } => {
                     let mut p = PLAYER.lock().unwrap();
-                    p.z -= STEP;
+                    let d = &dir_z * (-STEP);
+                    *p += d;
                 }
                 Event::KeyDown {
                     keycode: Some(Keycode::D),
                     ..
                 } => {
                     let mut p = PLAYER.lock().unwrap();
-                    p.x += STEP;
+                    let d = &dir_x * STEP;
+                    *p += d;
                 }
                 Event::KeyDown {
                     keycode: Some(Keycode::Q),
                     ..
                 } => {
                     let mut p = PLAYER.lock().unwrap();
-                    p.x -= STEP;
+                    let d = &dir_x * (-STEP);
+                    *p += d;
                 }
                 Event::KeyDown {
                     keycode: Some(Keycode::A),
                     ..
                 } => {
                     let mut p = PLAYER.lock().unwrap();
-                    p.y += STEP;
+                    let d = &dir_y * STEP;
+                    *p += d;
                 }
                 Event::KeyDown {
                     keycode: Some(Keycode::E),
                     ..
                 } => {
                     let mut p = PLAYER.lock().unwrap();
-                    p.y -= STEP;
+                    let d = &dir_y * (-STEP);
+                    *p += d;
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::W),
+                    ..
+                } => {
+                    cur_rotation += rad!(1.0);
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::X),
+                    ..
+                } => {
+                    cur_rotation -= rad!(1.0);
                 }
                 _ => {}
             }
