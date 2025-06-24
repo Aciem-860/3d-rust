@@ -14,7 +14,7 @@ pub struct SquareIter<'a> {
 }
 
 impl Square {
-    pub fn new(vertices: &[Point3D; 4], color: &Color) -> Square {
+    pub fn new(vertices: &[Point3D], color: &Color) -> Square {
         let mut v: [Point3D; 4] = [Point3D::ZERO; 4];
         v.clone_from_slice(vertices);
         Square {
@@ -39,7 +39,7 @@ impl<'a> Iterator for SquareIter<'a> {
             return None;
         }
 
-        let l = &self.square.vertices[self.idx];
+        let l = &self.square.vertices[ self.idx         ];
         let r = &self.square.vertices[(self.idx + 1) % 4];
         self.idx += 1;
         Some(Tuple::new(l, r))
