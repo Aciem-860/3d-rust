@@ -13,6 +13,27 @@ impl Point3D {
         Point3D { x, y, z }
     }
 
+    pub fn dot(&self, other: &Point3D) -> f32 {
+        self.x * other.x + self.y * other.y + self.z * other.z
+    }
+
+    pub fn norm(&self) -> f32 {
+        (self.x.powi(2) + self.y.powi(2) + self.z.powi(2)).sqrt()
+    }
+
+    pub fn angle(&self, rhs: &Point3D) -> f32 {
+        self.dot(rhs) / (self.norm() * rhs.norm())
+    }
+
+    pub fn normalize(&self) -> Point3D {
+        let n = self.norm();
+        Point3D {
+            x: self.x/n,
+            y: self.y/n,
+            z: self.z/n,
+        }
+    }
+
     pub fn rotate(&self, center: &Point3D, rot: &Rotation3) -> Point3D {
         self.rotate_x(center, rot.rot_x)
             .rotate_y(center, rot.rot_y)
@@ -140,6 +161,17 @@ impl Mul<f32> for &Point3D {
     }
 }
 
+impl Mul for Point3D {
+    type Output = Self;
+    fn mul(self, rhs: Self) -> Self::Output {
+        Point3D {
+            x: self.y * rhs.z - self.z * rhs.y,
+            y: self.z * rhs.x - self.x * rhs.z,
+            z: self.x * rhs.y - self.y * rhs.x,
+        }
+    }
+}
+
 impl Add for Point3D {
     type Output = Point3D;
 
@@ -190,12 +222,12 @@ impl SubAssign for Point3D {
 
 #[derive(Debug, Clone)]
 pub struct Point2D {
-    pub x: f32,
-    pub y: f32,
+    pub x: i32,
+    pub y: i32,
 }
 
 impl Point2D {
-    pub fn new(x: f32, y: f32) -> Point2D {
+    pub fn new(x: i32, y: i32) -> Point2D {
         Point2D { x, y }
     }
 }
@@ -210,9 +242,9 @@ impl From<&Point3D> for Point2D {
         let dz: f32 = value.z - player.z;
         let d: f32 = WIDTH as f32 / (2.0 * (FOV / 2.0).tan());
 
-        let new_x: f32 = (WINDOW_WIDTH / 2) as f32 + d * dx / dz;
+        let new_x: i32 = (WINDOW_WIDTH / 2) as i32 + (d * dx / dz).round() as i32;
         let dy: f32 = value.y - player.y;
-        let new_y: f32 = (WINDOW_HEIGHT / 2) as f32 + d * dy / dz;
+        let new_y: i32 = (WINDOW_HEIGHT / 2) as i32 + (d * dy / dz).round() as i32;
 
         Point2D { x: new_x, y: new_y }
     }
@@ -226,6 +258,6 @@ impl From<Point3D> for Point2D {
 
 impl From<&Point2D> for sdl2::rect::Point {
     fn from(value: &Point2D) -> sdl2::rect::Point {
-        sdl2::rect::Point::new(value.x.round() as i32, value.y.round() as i32)
+        sdl2::rect::Point::new(value.x, value.y)
     }
 }

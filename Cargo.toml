@@ -5,4 +5,8 @@ edition = "2021"
 
 [dependencies]
 lazy_static = "1.5.0"
-sdl2 = "0.37.0"
+
+[dependencies.sdl2]
+version = "*"
+default-features = false
+features = ["gfx"]

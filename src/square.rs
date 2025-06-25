@@ -29,6 +29,14 @@ impl Square {
             idx: 0,
         }
     }
+
+    // Return is a vector whose origin is at (0, 0, 0)
+    pub fn normal(&self) -> Point3D {
+        let first = &self.vertices[1] - &self.vertices[0];
+        let second = &self.vertices[3] - &self.vertices[0];
+
+        first * second
+    }
 }
 
 impl<'a> Iterator for SquareIter<'a> {

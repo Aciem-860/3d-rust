@@ -19,9 +19,29 @@ use sdl2::pixels::Color;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use sdl2::gfx::primitives::DrawRenderer;
+
+// TODO: Home-made quaternions in Rust for better rotation
+
+fn color_mul(color: &Color, factor: f32) -> Color {
+    let r = (color.r as f32 * factor).round().clamp(0.0, 255.0) as u8;
+    let g = (color.g as f32 * factor).round().clamp(0.0, 255.0) as u8;
+    let b = (color.b as f32 * factor).round().clamp(0.0, 255.0) as u8;
+    let a = color.a;
+
+    Color { r, g, b, a }
+}
+
+
 macro_rules! rad {
-    ($angle:expr) => {
-        $angle * std::f32::consts::PI / 180.0
+    ($deg:expr) => {
+        $deg * std::f32::consts::PI / 180.0
+    };
+}
+
+macro_rules! deg {
+    ($rad:expr) => {
+        $rad * 180.0 / std::f32::consts::PI
     };
 }
 
@@ -85,8 +105,10 @@ pub fn main() {
     canvas.set_draw_color(Color::YELLOW);
     canvas.clear();
     canvas.present();
+
     let mut event_pump = sdl_context.event_pump().unwrap();
     'running: loop {
+
         // Draw the background
         canvas.set_draw_color(Color::BLACK);
         canvas.clear();
@@ -104,24 +126,41 @@ pub fn main() {
         );
 
         for s in squares.iter_mut() {
+
+            println!("angle: {}", s.normal().dot(&dir_z));
+
             let mut vertices = [Point3D::ZERO; 4];
 
             for (i, v) in s.vertices.iter().enumerate() {
                 vertices[i] = v.rotate(&p, &cur_rotation);
             }
 
+            let a = s.normal().angle(&dir_z);
+            let lumen = 1.0 - a / std::f32::consts::PI;
+
             let sq = Square::new(&vertices, &s.color);
             canvas.set_draw_color(sq.color);
 
-            for vertices in sq.iter_pairs() {
-                let first = vertices.first;
-                let second = vertices.second;
+            let mut vx: Vec<i16> = vec![];
+            let mut vy: Vec<i16> = vec![];
 
-                let _ = canvas.draw_line(
-                    sdl2::rect::Point::from(&Point2D::from(first)),
-                    sdl2::rect::Point::from(&Point2D::from(second)),
-                );
-            }
+            vertices.iter().for_each(|v| {
+                let v2: Point2D = v.into();
+                vx.push(v2.x as i16);
+                vy.push(v2.y as i16);
+            });
+
+            let _ = canvas.filled_polygon(vx.as_slice(), vy.as_slice(), color_mul(&sq.color, lumen));
+
+            // for vertices in sq.iter_pairs() {
+            //     let first = vertices.first;
+            //     let second = vertices.second;
+
+            //     let _ = canvas.draw_line(
+            //         sdl2::rect::Point::from(&Point2D::from(first)),
+            //         sdl2::rect::Point::from(&Point2D::from(second)),
+            //     );
+            // }
         }
 
         for event in event_pump.poll_iter() {
