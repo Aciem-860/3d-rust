@@ -22,7 +22,7 @@ impl Point3D {
     }
 
     pub fn angle(&self, rhs: &Point3D) -> f32 {
-        self.dot(rhs) / (self.norm() * rhs.norm())
+        (self.dot(rhs) / (self.norm() * rhs.norm())).acos()
     }
 
     pub fn normalize(&self) -> Point3D {

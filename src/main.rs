@@ -126,8 +126,12 @@ pub fn main() {
         );
 
         for s in squares.iter_mut() {
+            let cross = s.normal().dot(&dir_z);
+            println!("normal = {:?} |  dir = {:?} | cross = {cross}", s.normal(), dir_z);
 
-            println!("angle: {}", s.normal().dot(&dir_z));
+            if cross > 0. {
+                continue;
+            }
 
             let mut vertices = [Point3D::ZERO; 4];
 
@@ -136,7 +140,7 @@ pub fn main() {
             }
 
             let a = s.normal().angle(&dir_z);
-            let lumen = 1.0 - a / std::f32::consts::PI;
+            let lumen = a / std::f32::consts::PI;
 
             let sq = Square::new(&vertices, &s.color);
             canvas.set_draw_color(sq.color);
