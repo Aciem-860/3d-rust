@@ -107,20 +107,22 @@ pub fn main() {
     canvas.present();
 
     let mut event_pump = sdl_context.event_pump().unwrap();
-    let cur_rotation = {
-        let r = ROTATION.lock().unwrap();
-        r.clone()
-    };
 
     'running: loop {
+	let cur_rotation = {
+            let r = ROTATION.lock().unwrap();
+            r.clone()
+	};
+
         // Draw the background
         canvas.set_draw_color(Color::BLACK);
         canvas.clear();
 
         let rot_revert = &cur_rotation.revert();
+	
         let (dir_x, dir_z) = (
-            Point3D::X.rotate(&Point3D::ZERO, rot_revert),
-            Point3D::Z.rotate(&Point3D::ZERO, rot_revert),
+            Point3D::X.rotate(&Point3D::ZERO, &rot_revert),
+            Point3D::Z.rotate(&Point3D::ZERO, &rot_revert),
         );
 
         let p = {

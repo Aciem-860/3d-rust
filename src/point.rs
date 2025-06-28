@@ -40,7 +40,7 @@ impl Point3D {
             .rotate_z(center, rot.rot_z)
     }
 
-    fn rotate_x(&self, center: &Point3D, angle_rad: f32) -> Point3D {
+    pub fn rotate_x(&self, center: &Point3D, angle_rad: f32) -> Point3D {
         let s = angle_rad.sin();
         let c = angle_rad.cos();
 
@@ -57,7 +57,7 @@ impl Point3D {
         }
     }
 
-    fn rotate_y(&self, center: &Point3D, angle_rad: f32) -> Point3D {
+    pub fn rotate_y(&self, center: &Point3D, angle_rad: f32) -> Point3D {
         let s = angle_rad.sin();
         let c = angle_rad.cos();
 
@@ -74,7 +74,7 @@ impl Point3D {
         }
     }
 
-    fn rotate_z(&self, center: &Point3D, angle_rad: f32) -> Point3D {
+    pub fn rotate_z(&self, center: &Point3D, angle_rad: f32) -> Point3D {
         let s = angle_rad.sin();
         let c = angle_rad.cos();
 
