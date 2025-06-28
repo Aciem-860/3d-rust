@@ -180,6 +180,9 @@ pub fn main() {
             // }
         }
 
+	// Drawing the crosshair
+	let _ = canvas.filled_circle((WINDOW_WIDTH/2) as i16, (WINDOW_HEIGHT/2) as i16, 5, Color::RED);
+	
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit { .. }
