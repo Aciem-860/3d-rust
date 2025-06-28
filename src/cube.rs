@@ -23,7 +23,7 @@ pub struct Cube {
 impl Cube {
     pub fn new(corner: &Point3D, color: Color, edge_size: f32) -> Cube {
         let mut vertices = [Point3D::ZERO; 8];
-
+	
         let x = &Point3D::X * edge_size;
         let y = &Point3D::Y * edge_size;
         let z = &Point3D::Z * edge_size;
@@ -45,34 +45,61 @@ impl Into<Vec<Square>> for Cube {
     fn into(self) -> Vec<Square> {
         let mut faces: Vec<Square> = vec![];
 
-        let top = [self.vertices[0].clone(), self.vertices[1].clone(), self.vertices[3].clone(), self.vertices[2].clone()];
+        let top = [
+            self.vertices[0].clone(),
+            self.vertices[1].clone(),
+            self.vertices[3].clone(),
+            self.vertices[2].clone(),
+        ];
         let top = top.as_slice();
 
-        let back = [self.vertices[2].clone(), self.vertices[3].clone(), self.vertices[7].clone(), self.vertices[6].clone()];
+        let back = [
+            self.vertices[2].clone(),
+            self.vertices[3].clone(),
+            self.vertices[7].clone(),
+            self.vertices[6].clone(),
+        ];
         let back = back.as_slice();
 
-        let front = [self.vertices[0].clone(), self.vertices[4].clone(), self.vertices[5].clone(), self.vertices[1].clone()];
+        let front = [
+            self.vertices[0].clone(),
+            self.vertices[4].clone(),
+            self.vertices[5].clone(),
+            self.vertices[1].clone(),
+        ];
         let front = front.as_slice();
 
-        let left = [self.vertices[6].clone(), self.vertices[4].clone(), self.vertices[0].clone(), self.vertices[2].clone()];
+        let left = [
+            self.vertices[6].clone(),
+            self.vertices[4].clone(),
+            self.vertices[0].clone(),
+            self.vertices[2].clone(),
+        ];
         let left = left.as_slice();
 
-        let right = [self.vertices[1].clone(), self.vertices[5].clone(), self.vertices[7].clone(), self.vertices[3].clone()];
+        let right = [
+            self.vertices[1].clone(),
+            self.vertices[5].clone(),
+            self.vertices[7].clone(),
+            self.vertices[3].clone(),
+        ];
         let right = right.as_slice();
 
-        let bottom = [self.vertices[6].clone(), self.vertices[7].clone(), self.vertices[5].clone(), self.vertices[4].clone()];
+        let bottom = [
+            self.vertices[6].clone(),
+            self.vertices[7].clone(),
+            self.vertices[5].clone(),
+            self.vertices[4].clone(),
+        ];
         let bottom = bottom.as_slice();
 
-
-
-// TODO: ORDER MATTERS ! ORDER DYNAMICALLY CONSIDERING THE DISTANCE TO THE PLAYER
+        // TODO: ORDER MATTERS ! ORDER DYNAMICALLY CONSIDERING THE DISTANCE TO THE PLAYER
+        faces.push(Square::new(top, &self.color));
         faces.push(Square::new(bottom, &self.color));
         faces.push(Square::new(left, &self.color));
         faces.push(Square::new(right, &self.color));
         faces.push(Square::new(back, &self.color));
         faces.push(Square::new(front, &self.color));
-        faces.push(Square::new(top, &self.color));
-
 
         faces
     }

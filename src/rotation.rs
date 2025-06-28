@@ -1,4 +1,4 @@
-use std::ops::{Add, Sub, AddAssign, SubAssign};
+use std::ops::{Add, AddAssign, Sub, SubAssign};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Rotation {
@@ -16,7 +16,11 @@ pub struct Rotation3 {
 
 impl Rotation3 {
     pub fn new(rot_x: f32, rot_y: f32, rot_z: f32) -> Rotation3 {
-        Rotation3 { rot_x, rot_y, rot_z }
+        Rotation3 {
+            rot_x,
+            rot_y,
+            rot_z,
+        }
     }
 
     pub fn new_axis(angle: f32, axis: Rotation) -> Rotation3 {
@@ -38,7 +42,7 @@ impl Add for &Rotation3 {
         Rotation3::new(
             self.rot_x + rhs.rot_x,
             self.rot_y + rhs.rot_y,
-            self.rot_z + rhs.rot_z
+            self.rot_z + rhs.rot_z,
         )
     }
 }
@@ -49,7 +53,7 @@ impl Sub for &Rotation3 {
         Rotation3::new(
             self.rot_x - rhs.rot_x,
             self.rot_y - rhs.rot_y,
-            self.rot_z - rhs.rot_z
+            self.rot_z - rhs.rot_z,
         )
     }
 }

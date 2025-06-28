@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use sdl2::pixels::Color;
 
 use crate::{Point3D, Tuple};
@@ -37,6 +39,27 @@ impl Square {
 
         first * second
     }
+
+    pub fn distance_from_point(&self, point: &Point3D) -> f32 {
+        let v1 = &self.vertices[0];
+        let v2 = &self.vertices[2];
+        let center = Point3D::new((v1.x + v2.x) / 2., (v1.y + v2.y) / 2., (v1.z + v2.z) / 2.);
+        let delta = &center - point;
+        delta.norm()
+    }
+
+    pub fn closer_to_point(s1: &Square, s2: &Square, p: &Point3D) -> Ordering {
+        let d1 = s1.distance_from_point(&p);
+        let d2 = s2.distance_from_point(&p);
+
+        if d1 > d2 {
+            Ordering::Greater
+        } else if d1 < d2 {
+            Ordering::Less
+        } else {
+            Ordering::Equal
+        }
+    }
 }
 
 impl<'a> Iterator for SquareIter<'a> {
@@ -47,7 +70,7 @@ impl<'a> Iterator for SquareIter<'a> {
             return None;
         }
 
-        let l = &self.square.vertices[ self.idx         ];
+        let l = &self.square.vertices[self.idx];
         let r = &self.square.vertices[(self.idx + 1) % 4];
         self.idx += 1;
         Some(Tuple::new(l, r))

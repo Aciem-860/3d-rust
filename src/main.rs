@@ -1,16 +1,16 @@
 extern crate sdl2;
 
+mod cube;
 mod point;
 mod rotation;
 mod square;
 mod tuple;
-mod cube;
 
+use cube::*;
 use point::*;
 use rotation::*;
 use square::*;
 use tuple::*;
-use cube::*;
 
 use lazy_static::lazy_static;
 use sdl2::event::Event;
@@ -32,7 +32,6 @@ fn color_mul(color: &Color, factor: f32) -> Color {
     Color { r, g, b, a }
 }
 
-
 macro_rules! rad {
     ($deg:expr) => {
         $deg * std::f32::consts::PI / 180.0
@@ -49,12 +48,15 @@ const WINDOW_WIDTH: u32 = 1500;
 const WINDOW_HEIGHT: u32 = 1000;
 const SQUARE_SIZE: u32 = 1;
 const WIDTH: u32 = WINDOW_WIDTH / SQUARE_SIZE;
+const HEIGHT: u32 = WINDOW_HEIGHT / SQUARE_SIZE;
 // const HEIGHT: u32 = WINDOW_HEIGHT / SQUARE_SIZE;
 const FOV: f32 = rad!(75.0);
 const STEP: i32 = 20;
+const ANGLE_STEP: f32 = 5.;
 
 lazy_static! {
     static ref PLAYER: Arc<Mutex<Point3D>> = Arc::new(Mutex::new(Point3D::new(0., 0., 0.)));
+    static ref ROTATION: Arc<Mutex<Rotation3>> = Arc::new(Mutex::new(Rotation3::new(0., 0., 0.)));
 }
 
 pub fn main() {
@@ -89,8 +91,6 @@ pub fn main() {
     let cube = Cube::new(&corner, Color::CYAN, 20.);
     let mut squares: Vec<Square> = cube.into();
 
-    let mut cur_rotation: Rotation3 = Rotation3::new(0., 0., 0.);
-
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
 
@@ -107,54 +107,65 @@ pub fn main() {
     canvas.present();
 
     let mut event_pump = sdl_context.event_pump().unwrap();
-    'running: loop {
+    let cur_rotation = {
+        let r = ROTATION.lock().unwrap();
+        r.clone()
+    };
 
+    'running: loop {
         // Draw the background
         canvas.set_draw_color(Color::BLACK);
         canvas.clear();
+
+        let rot_revert = &cur_rotation.revert();
+        let (dir_x, dir_z) = (
+            Point3D::X.rotate(&Point3D::ZERO, rot_revert),
+            Point3D::Z.rotate(&Point3D::ZERO, rot_revert),
+        );
 
         let p = {
             let p = PLAYER.lock().unwrap();
             p.clone()
         };
 
-        let rot_revert = &cur_rotation.revert();
-        let (dir_x, dir_y, dir_z) = (
-            Point3D::X.rotate(&Point3D::ZERO, rot_revert),
-            Point3D::Y.rotate(&Point3D::ZERO, rot_revert),
-            Point3D::Z.rotate(&Point3D::ZERO, rot_revert),
-        );
+        squares.sort_by(|s1, s2| Square::closer_to_point(s2, s1, &p));
 
+        // println!("");
         for s in squares.iter_mut() {
             let cross = s.normal().dot(&dir_z);
-            println!("normal = {:?} |  dir = {:?} | cross = {cross}", s.normal(), dir_z);
+
+            // {
+            //     let p = PLAYER.lock().unwrap();
+            //     println!("distance: {}", s.distance_from_point(&p));
+            // }
 
             if cross > 0. {
                 continue;
             }
 
-            let mut vertices = [Point3D::ZERO; 4];
+            // let mut vertices = [Point3D::ZERO; 4];
 
-            for (i, v) in s.vertices.iter().enumerate() {
-                vertices[i] = v.rotate(&p, &cur_rotation);
-            }
+            // for (i, v) in s.vertices.iter().enumerate() {
+            //     vertices[i] = v.rotate(&p, &cur_rotation);
+            // }
 
             let a = s.normal().angle(&dir_z);
             let lumen = a / std::f32::consts::PI;
 
-            let sq = Square::new(&vertices, &s.color);
+            let sq = Square::new(&s.vertices, &s.color);
             canvas.set_draw_color(sq.color);
 
             let mut vx: Vec<i16> = vec![];
             let mut vy: Vec<i16> = vec![];
 
-            vertices.iter().for_each(|v| {
+            s.vertices.iter().for_each(|v| {
                 let v2: Point2D = v.into();
                 vx.push(v2.x as i16);
                 vy.push(v2.y as i16);
             });
 
-            let _ = canvas.filled_polygon(vx.as_slice(), vy.as_slice(), color_mul(&sq.color, lumen));
+            let _ =
+                canvas.filled_polygon(vx.as_slice(), vy.as_slice(), color_mul(&sq.color, lumen));
 
             // for vertices in sq.iter_pairs() {
             //     let first = vertices.first;
@@ -211,7 +222,7 @@ pub fn main() {
                     ..
                 } => {
                     let mut p = PLAYER.lock().unwrap();
-                    let d = &dir_y * STEP;
+                    let d = &Point3D::Y * STEP;
                     *p += d;
                 }
                 Event::KeyDown {
@@ -219,32 +230,36 @@ pub fn main() {
                     ..
                 } => {
                     let mut p = PLAYER.lock().unwrap();
-                    let d = &dir_y * (-STEP);
+                    let d = &Point3D::Y * (-STEP);
                     *p += d;
                 }
                 Event::KeyDown {
                     keycode: Some(Keycode::W),
                     ..
                 } => {
-                    cur_rotation += Rotation3::new_axis(rad!(1.0), Rotation::Y);
+                    let mut r = ROTATION.lock().unwrap();
+                    *r += Rotation3::new_axis(rad!(ANGLE_STEP), Rotation::Y);
                 }
                 Event::KeyDown {
                     keycode: Some(Keycode::X),
                     ..
                 } => {
-                    cur_rotation -= Rotation3::new_axis(rad!(1.0), Rotation::Y);
+                    let mut r = ROTATION.lock().unwrap();
+                    *r -= Rotation3::new_axis(rad!(ANGLE_STEP), Rotation::Y);
                 }
                 Event::KeyDown {
                     keycode: Some(Keycode::T),
                     ..
                 } => {
-                    cur_rotation += Rotation3::new_axis(rad!(1.0), Rotation::X);
+                    let mut r = ROTATION.lock().unwrap();
+                    *r += Rotation3::new_axis(rad!(ANGLE_STEP), Rotation::X);
                 }
                 Event::KeyDown {
                     keycode: Some(Keycode::R),
                     ..
                 } => {
-                    cur_rotation -= Rotation3::new_axis(rad!(1.0), Rotation::X);
+                    let mut r = ROTATION.lock().unwrap();
+                    *r -= Rotation3::new_axis(rad!(ANGLE_STEP), Rotation::X);
                 }
                 _ => {}
             }

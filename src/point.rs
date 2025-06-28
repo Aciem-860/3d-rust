@@ -1,4 +1,4 @@
-use crate::{Rotation3, FOV, PLAYER, WIDTH, WINDOW_HEIGHT, WINDOW_WIDTH};
+use crate::{Rotation3, FOV, PLAYER, ROTATION, WIDTH, HEIGHT};
 use std::ops::{Add, AddAssign, Mul, Sub, SubAssign};
 
 #[derive(Debug, Clone)]
@@ -28,9 +28,9 @@ impl Point3D {
     pub fn normalize(&self) -> Point3D {
         let n = self.norm();
         Point3D {
-            x: self.x/n,
-            y: self.y/n,
-            z: self.z/n,
+            x: self.x / n,
+            y: self.y / n,
+            z: self.z / n,
         }
     }
 
@@ -238,15 +238,35 @@ impl From<&Point3D> for Point2D {
             let p = PLAYER.lock().unwrap();
             p.clone()
         };
-        let dx: f32 = value.x - player.x;
-        let dz: f32 = value.z - player.z;
-        let d: f32 = WIDTH as f32 / (2.0 * (FOV / 2.0).tan());
 
-        let new_x: i32 = (WINDOW_WIDTH / 2) as i32 + (d * dx / dz).round() as i32;
-        let dy: f32 = value.y - player.y;
-        let new_y: i32 = (WINDOW_HEIGHT / 2) as i32 + (d * dy / dz).round() as i32;
+        let theta = {
+            let t = ROTATION.lock().unwrap();
+            t.clone()
+        };
 
-        Point2D { x: new_x, y: new_y }
+	// Get object coordinate regarding player's position
+	let value = value - &player;
+	
+	// Rotate around Y
+	let value = value.rotate_y(&Point3D::ZERO, theta.rot_y);
+	
+	// Rotate around X
+	let value = value.rotate_x(&Point3D::ZERO, theta.rot_x);
+
+	// Projection
+        if value.z <= 0.0 {
+            return Point2D { x: -1, y: -1 }; // Ignore if behind camera
+        }
+
+        let d = WIDTH as f32 / (2.0 * (FOV / 2.0).tan());
+
+        let screen_x = (value.x / value.z) * d + WIDTH as f32 / 2.0;
+        let screen_y = (value.y / value.z) * d + HEIGHT as f32 / 2.0;
+
+        Point2D {
+            x: screen_x.round() as i32,
+            y: screen_y.round() as i32,
+        }
     }
 }
 
